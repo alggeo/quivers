@@ -327,7 +327,7 @@ class Quiver {
         return p;
     }
 
-    // list of paths starting from i to j
+    // list of paths from i to j
     pathsFromTo({v = this.vertices, a = this.arrows, i = null, j = null} = {}) {
 
         if (i === null || j === null) {
@@ -366,38 +366,6 @@ class Quiver {
         return c;
     }
 
-    representation(matrices) {
-        if (matrices.length !== this.arrows.length) {
-            throw new Error('Not as many matrices as arrows');
-        }
-        const dim = [];
-        const sup = [];
-        for (let j = 0; j < matrices.length; j++) {
-            const sizes = math.size(matrices[j]);
-            if (dim[this.arrows[j][0]] && (dim[this.arrows[j][0]] !== sizes[1])) {
-                throw new Error('Matrices not compatible');
-            }
-            else {
-                dim[this.arrows[j][0]] = sizes[1];
-                sup.push(this.arrows[j][0]);
-            }
-            if (dim[this.arrows[j][1]] && (dim[this.arrows[j][1]] !== sizes[0])) {
-                throw new Error('Matrices not compatible');
-            }
-            else {
-                dim[this.arrows[j][1]] = sizes[0];
-                sup.push(this.arrows[j][1]);
-            }
-        }
-        sup.sort((a, b) => a - b);
-        this.vertices.forEach(vertex => {
-            if (!dim[vertex]) {
-                dim[vertex] = 0;
-            }
-        });
-        const sincere = sup.length === dim.length;
-        return {dim: dim, support: sup, sincere: sincere, matrices: matrices};
-    }
 
     // indecomposables e_i(kQ/I) given as an array with the dimensionvecor and matrices with respect 
     // to the canonical basis obtained by ordering the paths according to their order in this.paths
@@ -405,7 +373,8 @@ class Quiver {
         const indecomposables = [];
         v.forEach (vertex => {
             a.forEach(arrow => {
-                const vkQ = this.pathsFromTo({v: v, a: a, i: a});
+                const vkQs = this.pathsFromTo({v: v, a: a, i: vertex, j: arrow[0]});
+                const vkQt = this.pathsFromTo({v: v, a: a, i: vertex, j: arrow[1]});
             });
         });
     }
