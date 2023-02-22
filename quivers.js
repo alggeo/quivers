@@ -40,7 +40,6 @@ class Quiver {
             });
         }
         if (typeof arrows === 'string') {
-            
             for (const match of arrows.matchAll(/\[([^, ;]+)[ ,;]([^, ;]+)\]/g)) {
                 if (vertices.match(match[1]) && vertices.match(match[2])) {
                     unorderedArrows.push([this.vertexDict[match[1]], this.vertexDict[match[2]]]);
@@ -64,7 +63,6 @@ class Quiver {
                     this.arrows.splice(j, 0, ar);
                     j = this.arrows.length;
                 }
-                console.log(this.arrows);
             }
         });
 
@@ -97,7 +95,7 @@ class Quiver {
         this.vertices.forEach(vertex => {
             const qv = this.pathsTo({v: this.vertices, a: this.arrows, i: vertex});
             qv.forEach(lpaths => {
-                const l = lpaths[0].length - 2;
+                const l = lpaths[0].length - 1;
 
                 lpaths.forEach(path => {
                     if (this.paths[l]) {
@@ -127,7 +125,6 @@ class Quiver {
         });
 
         this.paths.forEach(lpaths => {
-
             lpaths.forEach(path => {
                 this.pathMatrix[path[0]][path[path.length - 1]].push(path);
             });
@@ -210,7 +207,7 @@ class Quiver {
     // the vertex or vertices i are reoved along with any arrows from or to them
     removeVertices({v = this.vertices, a = this.arrows, i = null} = {}) {
 
-        if (!i) {
+        if (i === null) {
             throw new Error('Vertex to remove not specified');
         }
         if (typeof i === 'number') {
@@ -268,11 +265,7 @@ class Quiver {
                 }
             }
             else {
-                a.forEach(arrow => {
-                    if (arrow[0] === i) {
-                        pp.push(arrow);
-                    }
-                });
+                pp.push([i]);
                 if (pp.length > 0) {
                     p.push(pp);
                 }
@@ -311,11 +304,7 @@ class Quiver {
                 }
             }
             else {
-                a.forEach(arrow => {
-                    if (arrow[1] === i) {
-                        pp.push(arrow);
-                    }
-                });
+                pp.push([i]);
                 if (pp.length > 0) {
                     p.push(pp);
                 }
@@ -327,7 +316,7 @@ class Quiver {
         return p;
     }
 
-    // list of paths from i to j
+    // list of paths starting from i to j
     pathsFromTo({v = this.vertices, a = this.arrows, i = null, j = null} = {}) {
 
         if (i === null || j === null) {
@@ -360,22 +349,49 @@ class Quiver {
                 c.set([path[path.length - 1],path[0]], c.get([path[path.length - 1],path[0]]) + 1);
             });
         });
-        v.forEach(vertex => {
-            c.set([vertex, vertex], c.get([vertex, vertex]) + 1);
-        });
         return c;
     }
 
-
     // indecomposables e_i(kQ/I) given as an array with the dimensionvecor and matrices with respect 
     // to the canonical basis obtained by ordering the paths according to their order in this.paths
-    computeProjectiveIndecomposables({v = this.vertices, a = this.arrows, p = this.paths} = {}) {
+    computeProjectiveIndecomposables({v = this.vertices, a = this.arrows, p = this.pathMatrix} = {}) {
         const indecomposables = [];
         v.forEach (vertex => {
+            const indecomposable = {};
+            const dim = [];
+            const matrices = [];
+            let duplicateArrow;
+            let duplicateArrowOffset = 1;
             a.forEach(arrow => {
-                const vkQs = this.pathsFromTo({v: v, a: a, i: vertex, j: arrow[0]});
-                const vkQt = this.pathsFromTo({v: v, a: a, i: vertex, j: arrow[1]});
+                if (!dim[arrow[0]]) {
+                    dim[arrow[0]] = p[vertex][arrow[0]].length;
+                }
+                if (!dim[arrow[1]]) {
+                    dim[arrow[1]] = p[vertex][arrow[1]].length;
+                }
+                let ma;
+                if (dim[arrow[0]] === 0 || dim[arrow[1]] == 0) {
+                    ma = 0;
+                }
+                else {
+                    duplicateArrowOffset = arrow === duplicateArrow ? duplicateArrowOffset++ : 0;
+                    ma = Array(p[vertex][arrow[1]].length).fill(null).map(() => Array(p[vertex][arrow[0]].length).fill(0));
+                    let duplicatePathOffset = 0;
+                    let duplicatePath;
+                    let row = 0;
+                    for (let j = 0; j < p[vertex][arrow[0]].length; j++) {
+                        p[vertex][arrow[0]][j] === duplicatePath ? duplicatePathOffset += duplicateArrowOffset : 0;
+                        for (; p[vertex][arrow[1]][row].toString() !== [...(p[vertex][arrow[0]][j]), arrow[1]].toString(); row++) {}
+                        ma[row + duplicatePathOffset + duplicateArrowOffset][j] = 1;
+                    }
+                }
+                
+                matrices.push(ma);
             });
+            indecomposable.dim = dim;
+            indecomposable.matrices = matrices;
+            indecomposables.push(indecomposable);
         });
+        return indecomposables;
     }
 }
